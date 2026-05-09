@@ -1,0 +1,82 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from statsmodels.tsa.api import VAR
+
+# =========================
+# 🎨 PAGE CONFIG
+# =========================
+st.set_page_config(page_title="VAR Dashboard", layout="wide")
+
+st.title("📊 VAR Econometric Dashboard")
+st.markdown("Analyse interactive du modèle VAR")
+
+# =========================
+# 📂 LOAD DATA
+# =========================
+uploaded_file = st.file_uploader("Upload your Excel file")
+
+if uploaded_file:
+
+    df = pd.read_excel(uploaded_file)
+
+    st.subheader("📌 Data Preview")
+    st.dataframe(df.head())
+
+    # =========================
+    # VARIABLES
+    # =========================
+    variables = st.multiselect(
+        "Select variables",
+        df.columns.tolist(),
+        default=df.columns.tolist()[1:4]
+    )
+
+    df = df.dropna()
+
+    # =========================
+    # VAR MODEL
+    # =========================
+    st.subheader("📈 VAR Model")
+
+    model = VAR(df[variables])
+    lag = st.slider("Select lag", 1, 5, 2)
+
+    results = model.fit(lag)
+
+    st.text(results.summary())
+
+    # =========================
+    # FORECAST
+    # =========================
+    st.subheader("🔮 Forecast")
+
+    steps = st.slider("Forecast steps", 1, 10, 5)
+
+    forecast = results.forecast(df[variables].values[-lag:], steps=steps)
+    forecast_df = pd.DataFrame(forecast, columns=variables)
+
+    st.dataframe(forecast_df)
+
+    # =========================
+    # IRF
+    # =========================
+    st.subheader("📊 Impulse Response")
+
+    irf = results.irf(10)
+
+    fig = irf.plot()
+    st.pyplot(fig)
+
+    # =========================
+    # FEVD
+    # =========================
+    st.subheader("📉 Variance Decomposition")
+
+    fevd = results.fevd(10)
+
+    fig2 = fevd.plot()
+    st.pyplot(fig2)
+
+    st.success("Analysis Completed Successfully!")
